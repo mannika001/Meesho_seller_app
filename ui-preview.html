@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EcommerceClarity — UI Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#F3EFFE;
+    --surface:#FFFFFF;
+    --border:#E4DCF9;
+    --text:#332B52;
+    --text-muted:#847BA6;
+
+    --accent:#8A7CF0;
+    --accent-dark:#4B3DAE;
+    --accent-tint:#E7E1FC;
+
+    --coral:#FF8A65;
+    --coral-dark:#B84A22;
+    --coral-tint:#FFE6DA;
+
+    --sky:#5FC2E8;
+    --sky-dark:#0E6E93;
+    --sky-tint:#DBF2FB;
+
+    --mint:#5FD1A6;
+    --mint-text:#136B47;
+    --mint-tint:#D8F5E8;
+
+    --peach:#FFC562;
+    --peach-text:#8A5405;
+    --peach-tint:#FFF0D4;
+
+    --rose:#FF7A8A;
+    --rose-text:#A11730;
+    --rose-tint:#FFE0E4;
+
+    --gray-tag:#EAE6F5;
+    --gray-tag-text:#6E6A82;
+
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family: "Inter", -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    background:var(--bg);
+    color:var(--text);
+  }
+  .app{
+    width:100%;
+    margin:0;
+    padding:28px 20px 60px;
+  }
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:24px;
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .brand-mark{
+    width:34px;height:34px;border-radius:10px;
+    background:var(--accent);
+    display:flex;align-items:center;justify-content:center;
+    font-weight:600;color:#FFFFFF;font-size:15px;
+  }
+  .brand-name{font-size:17px;font-weight:600;}
+  .brand-sub{font-size:12px;color:var(--text-muted);}
+
+  .tabs{
+    display:flex;
+    gap:6px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:999px;
+    padding:4px;
+  }
+  .tab{
+    border:none;
+    background:transparent;
+    padding:10px 20px;
+    border-radius:999px;
+    font-size:16px;
+    font-weight:500;
+    color:var(--text-muted);
+    cursor:pointer;
+  }
+  .tab.active{
+    background:var(--accent-tint);
+    color:var(--accent-dark);
+  }
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:20px 22px;
+  }
+  .card + .card{ margin-top:16px; }
+
+  .section-title{ font-size:16px; font-weight:600; margin:0 0 4px; }
+  .section-sub{ font-size:12.5px; color:var(--text-muted); margin:0 0 16px; }
+
+  /* Upload page */
+  .dropzone{
+    border:1.5px dashed var(--accent);
+    border-radius:var(--radius);
+    background:var(--accent-tint);
+    padding:28px;
+    text-align:center;
+  }
+  .dropzone-title{ font-size:14px; font-weight:600; color:var(--accent-dark); margin-bottom:4px;}
+  .dropzone-sub{ font-size:12.5px; color:var(--text-muted); margin-bottom:14px;}
+  .btn{
+    border:none;
+    background:var(--accent);
+    color:#FFFFFF;
+    font-weight:600;
+    font-size:13px;
+    padding:9px 18px;
+    border-radius:999px;
+    cursor:pointer;
+  }
+  .btn.ghost{
+    background:var(--surface);
+    border:1px solid var(--border);
+    color:var(--text);
+  }
+  .upload-row{ display:flex; gap:14px; margin-top:16px; }
+  .upload-row .dropzone{ flex:1; padding:20px; }
+
+  .summary-grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:12px;
+    margin-top:16px;
+  }
+  .stat{
+    background:var(--accent-tint);
+    border-radius:12px;
+    padding:14px 16px;
+  }
+  .stat-num{ font-size:22px; font-weight:600; color:var(--accent-dark); }
+  .stat.c-mint{ background:var(--mint-tint); }
+  .stat.c-mint .stat-num{ color:var(--mint-text); }
+  .stat.c-sky{ background:var(--sky-tint); }
+  .stat.c-sky .stat-num{ color:var(--sky-dark); }
+  .stat.c-peach{ background:var(--peach-tint); }
+  .stat.c-peach .stat-num{ color:var(--peach-text); }
+  .stat.c-coral{ background:var(--coral-tint); }
+  .stat.c-coral .stat-num{ color:var(--coral-dark); }
+  .stat-label{ font-size:12px; color:var(--text-muted); margin-top:2px;}
+
+  .batch-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 0;
+    border-bottom:1px solid var(--border);
+    font-size:13px;
+  }
+  .batch-row:last-child{ border-bottom:none; }
+  .batch-name{ font-weight:500; }
+  .batch-meta{ color:var(--text-muted); font-size:12px; }
+
+  /* Dashboard */
+  .filter-row{ display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+  .chip{
+    border:1px solid var(--border);
+    background:var(--surface);
+    color:var(--text-muted);
+    font-size:12.5px;
+    padding:6px 14px;
+    border-radius:999px;
+    cursor:pointer;
+  }
+  .chip.active{
+    background:var(--accent-tint);
+    border-color:var(--accent);
+    color:var(--accent-dark);
+    font-weight:600;
+  }
+
+  table{ width:100%; border-collapse:collapse; font-size:15px; }
+  th{
+    text-align:left;
+    font-size:12.5px;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    color:var(--text-muted);
+    font-weight:600;
+    padding:8px 10px;
+    border-bottom:1px solid var(--border);
+  }
+  td{
+    padding:11px 10px;
+    border-bottom:1px solid var(--border);
+    vertical-align:middle;
+  }
+  tr:last-child td{ border-bottom:none; }
+
+  .name-cell{ font-weight:500; }
+  .sub-cell{ color:var(--text-muted); font-size:12px; }
+
+  .tag{
+    display:inline-block;
+    font-size:11.5px;
+    font-weight:600;
+    padding:4px 10px;
+    border-radius:999px;
+  }
+  .tag.repeat{ background:var(--mint-tint); color:var(--mint-text); }
+  .tag.little{ background:var(--peach-tint); color:var(--peach-text); }
+  .tag.total{ background:var(--rose-tint); color:var(--rose-text); }
+  .tag.none{ background:var(--gray-tag); color:var(--gray-tag-text); }
+  .tag.returned{ background:var(--rose-tint); color:var(--rose-text); }
+  .tag.delivered{ background:var(--mint-tint); color:var(--mint-text); }
+
+  /* Chat */
+  .chat-window{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    height:420px;
+    overflow-y:auto;
+    margin-bottom:16px;
+    padding:4px 4px 0;
+  }
+  .msg{
+    max-width:75%;
+    padding:10px 14px;
+    border-radius:14px;
+    font-size:15px;
+    line-height:1.5;
+  }
+  .msg.user{
+    align-self:flex-end;
+    background:var(--accent-tint);
+    color:var(--accent-dark);
+    border-bottom-right-radius:4px;
+  }
+  .msg.bot{
+    align-self:flex-start;
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-bottom-left-radius:4px;
+  }
+  .chat-input-row{
+    display:flex;
+    gap:10px;
+  }
+  .chat-input{
+    flex:1;
+    border:1px solid var(--border);
+    border-radius:999px;
+    padding:11px 16px;
+    font-size:13.5px;
+    background:var(--bg);
+  }
+  .suggestions{ display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; }
+  .suggestion{
+    font-size:12px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    color:var(--text-muted);
+    padding:7px 12px;
+    border-radius:999px;
+  }
+
+  /* Excel data */
+  .table-scroll{ overflow-x:auto; }
+  .table-scroll table{ min-width:920px; }
+  .mono-cell{ font-family:"SFMono-Regular", Consolas, monospace; font-size:13.5px; color:var(--text-muted); }
+  .num-cell{ text-align:right; }
+
+  .hidden{ display:none; }
+  @media (max-width:640px){
+    .summary-grid{ grid-template-columns:repeat(2,1fr); }
+    .upload-row{ flex-direction:column; }
+    table{ font-size:12px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">EC</div>
+      <div>
+        <div class="brand-name">EcommerceClarity</div>
+        <div class="brand-sub">v1 · Meesho data</div>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" data-tab="upload">Upload</button>
+      <button class="tab" data-tab="dashboard">Dashboard</button>
+      <button class="tab" data-tab="exceldata">Excel data</button>
+      <button class="tab" data-tab="chat">Ask AI</button>
+    </div>
+  </div>
+
+  <!-- UPLOAD PAGE -->
+  <div id="upload" class="page">
+    <div class="card">
+      <div class="section-title">Upload this month's files</div>
+      <div class="section-sub">Drop in your Meesho zip and shipping label PDFs — we'll merge everything automatically.</div>
+      <div class="upload-row">
+        <div class="dropzone">
+          <div class="dropzone-title">GST report zip</div>
+          <div class="dropzone-sub">tcs_sales.xlsx + tcs_sales_return.xlsx</div>
+          <button class="btn">Choose file</button>
+        </div>
+        <div class="dropzone">
+          <div class="dropzone-title">Shipping labels</div>
+          <div class="dropzone-sub">One or more label PDFs</div>
+          <button class="btn ghost">Choose files</button>
+        </div>
+      </div>
+      <div style="text-align:right; margin-top:16px;">
+        <button class="btn">Process upload</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Last upload summary</div>
+      <div class="section-sub">June 2026 · GST_Reports_June2026.zip</div>
+      <div class="summary-grid">
+        <div class="stat c-sky"><div class="stat-num">339</div><div class="stat-label">orders merged</div></div>
+        <div class="stat c-coral"><div class="stat-num">41</div><div class="stat-label">returns matched</div></div>
+        <div class="stat c-mint"><div class="stat-num">2</div><div class="stat-label">repeat customers</div></div>
+        <div class="stat c-peach"><div class="stat-num">3</div><div class="stat-label">unmatched labels</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Upload history</div>
+      <div class="batch-row">
+        <div>
+          <div class="batch-name">GST_Reports_June2026.zip</div>
+          <div class="batch-meta">339 orders · completed</div>
+        </div>
+        <div class="batch-meta">17 Jul 2026</div>
+      </div>
+      <div class="batch-row">
+        <div>
+          <div class="batch-name">GST_Reports_May2026.zip</div>
+          <div class="batch-meta">298 orders · completed</div>
+        </div>
+        <div class="batch-meta">2 Jun 2026</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD PAGE -->
+  <div id="dashboard" class="page hidden">
+    <div class="card">
+      <div class="section-title">Customers</div>
+      <div class="section-sub">Repeat buyers and return-risk, at a glance.</div>
+      <div class="filter-row">
+        <button class="chip active">All</button>
+        <button class="chip">Repeat customers</button>
+        <button class="chip">Little scammy</button>
+        <button class="chip">Total scammy</button>
+      </div>
+      <table>
+        <thead>
+          <tr><th>Customer</th><th>Pincode</th><th>Orders</th><th>Returned</th><th>Return rate</th><th>Tag</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="name-cell">Shayamprasad</td>
+            <td class="sub-cell">734005</td>
+            <td>1</td><td>0</td><td>—</td>
+            <td><span class="tag none">Not enough data</span></td>
+          </tr>
+          <tr>
+            <td class="name-cell">Swati Patel</td>
+            <td class="sub-cell">482001</td>
+            <td>4</td><td>1</td><td>25%</td>
+            <td><span class="tag repeat">Repeat</span></td>
+          </tr>
+          <tr>
+            <td class="name-cell">Rakesh Kumar</td>
+            <td class="sub-cell">285001</td>
+            <td>5</td><td>2</td><td>40%</td>
+            <td><span class="tag little">Little scammy</span></td>
+          </tr>
+          <tr>
+            <td class="name-cell">Priya Sharma</td>
+            <td class="sub-cell">400607</td>
+            <td>6</td><td>5</td><td>83%</td>
+            <td><span class="tag total">Total scammy</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Recent orders</div>
+      <table>
+        <thead>
+          <tr><th>Order no.</th><th>Customer</th><th>Date</th><th>Value</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="sub-cell">307863912517890368_1</td>
+            <td class="name-cell">Shayamprasad</td>
+            <td class="sub-cell">12 Jul 2026</td>
+            <td>₹513</td>
+            <td><span class="tag delivered">Delivered</span></td>
+          </tr>
+          <tr>
+            <td class="sub-cell">309243944452162638_1</td>
+            <td class="name-cell">Swati Patel</td>
+            <td class="sub-cell">16 Jul 2026</td>
+            <td>₹147</td>
+            <td><span class="tag returned">Returned</span></td>
+          </tr>
+          <tr>
+            <td class="sub-cell">308811023375510221_1</td>
+            <td class="name-cell">Rakesh Kumar</td>
+            <td class="sub-cell">14 Jul 2026</td>
+            <td>₹329</td>
+            <td><span class="tag delivered">Delivered</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- EXCEL DATA PAGE -->
+  <div id="exceldata" class="page hidden">
+    <div class="card">
+      <div class="section-title">Raw Excel data</div>
+      <div class="section-sub">Exactly what's in your GST report — before any matching or tagging.</div>
+      <div class="filter-row" id="excelToggle">
+        <button class="chip active" data-view="sales">Sales (tcs_sales.xlsx)</button>
+        <button class="chip" data-view="returns">Returns (tcs_sales_return.xlsx)</button>
+      </div>
+
+      <div id="salesView" class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Sub order num</th><th>Order date</th><th>HSN code</th>
+              <th class="num-cell">Qty</th><th class="num-cell">GST rate</th>
+              <th class="num-cell">Taxable value</th><th class="num-cell">Tax amount</th>
+              <th class="num-cell">Invoice value</th><th>State</th><th>Txn type</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="mono-cell">307863912517890368_1</td>
+              <td class="sub-cell">2026-07-12</td>
+              <td class="mono-cell">620333</td>
+              <td class="num-cell">1</td>
+              <td class="num-cell">5.00</td>
+              <td class="num-cell">₹488.57</td>
+              <td class="num-cell">₹24.43</td>
+              <td class="num-cell">₹513.00</td>
+              <td>West Bengal</td>
+              <td>Sale</td>
+            </tr>
+            <tr>
+              <td class="mono-cell">309243944452162638_1</td>
+              <td class="sub-cell">2026-07-16</td>
+              <td class="mono-cell">392490</td>
+              <td class="num-cell">1</td>
+              <td class="num-cell">5.00</td>
+              <td class="num-cell">₹140.00</td>
+              <td class="num-cell">₹7.00</td>
+              <td class="num-cell">₹147.00</td>
+              <td>Madhya Pradesh</td>
+              <td>Sale</td>
+            </tr>
+            <tr>
+              <td class="mono-cell">308811023375510221_1</td>
+              <td class="sub-cell">2026-07-14</td>
+              <td class="mono-cell">610910</td>
+              <td class="num-cell">2</td>
+              <td class="num-cell">5.00</td>
+              <td class="num-cell">₹313.33</td>
+              <td class="num-cell">₹15.67</td>
+              <td class="num-cell">₹329.00</td>
+              <td>Uttar Pradesh</td>
+              <td>Sale</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div id="returnsView" class="table-scroll hidden">
+        <table>
+          <thead>
+            <tr>
+              <th>Sub order num</th><th>Order date</th><th>Cancel/return date</th>
+              <th class="num-cell">Qty</th><th class="num-cell">Taxable value</th>
+              <th class="num-cell">Invoice value</th><th>State</th><th>Txn type</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="mono-cell">309243944452162638_1</td>
+              <td class="sub-cell">2026-07-16</td>
+              <td class="sub-cell">2026-07-21</td>
+              <td class="num-cell">1</td>
+              <td class="num-cell">₹140.00</td>
+              <td class="num-cell">₹147.00</td>
+              <td>Madhya Pradesh</td>
+              <td>Return</td>
+            </tr>
+            <tr>
+              <td class="mono-cell">306120044981234567_1</td>
+              <td class="sub-cell">2026-07-08</td>
+              <td class="sub-cell">2026-07-19</td>
+              <td class="num-cell">1</td>
+              <td class="num-cell">₹255.24</td>
+              <td class="num-cell">₹268.00</td>
+              <td>Maharashtra</td>
+              <td>Cancel</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHAT PAGE -->
+  <div id="chat" class="page hidden">
+    <div class="card">
+      <div class="section-title">Ask about your data</div>
+      <div class="section-sub">Plain language questions about your orders, returns and customers.</div>
+      <div class="chat-window">
+        <div class="msg user">How many repeat customers did I get in June?</div>
+        <div class="msg bot">You had 2 repeat customers in June — Swati Patel (4 orders, 1 return) and Rakesh Kumar (5 orders, 2 returns). Rakesh is currently tagged "little scammy" based on his 40% return rate.</div>
+        <div class="msg user">Which product gets returned the most?</div>
+        <div class="msg bot">"Golden Table Clothe" has the highest return rate this month at 33%, across 6 orders.</div>
+      </div>
+      <div class="chat-input-row">
+        <input class="chat-input" type="text" placeholder="Ask a question about your orders..." />
+        <button class="btn">Ask</button>
+      </div>
+      <div class="suggestions">
+        <span class="suggestion">Who are my scammy customers?</span>
+        <span class="suggestion">Return rate this month vs last</span>
+        <span class="suggestion">Top 5 customers by order value</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  document.querySelectorAll('.tab').forEach(function(tab){
+    tab.addEventListener('click', function(){
+      document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
+      tab.classList.add('active');
+      document.querySelectorAll('.page').forEach(function(p){ p.classList.add('hidden'); });
+      document.getElementById(tab.dataset.tab).classList.remove('hidden');
+    });
+  });
+  document.querySelectorAll('.filter-row .chip').forEach(function(chip){
+    chip.addEventListener('click', function(){
+      chip.parentElement.querySelectorAll('.chip').forEach(function(c){ c.classList.remove('active'); });
+      chip.classList.add('active');
+    });
+  });
+
+  document.querySelectorAll('#excelToggle .chip').forEach(function(chip){
+    chip.addEventListener('click', function(){
+      document.getElementById('salesView').classList.toggle('hidden', chip.dataset.view !== 'sales');
+      document.getElementById('returnsView').classList.toggle('hidden', chip.dataset.view !== 'returns');
+    });
+  });
+</script>
+</body>
+</html>

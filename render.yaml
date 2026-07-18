@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: meesho-seller-app-backend
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: SCAM_MIN_ORDERS
+        value: 3
+      - key: SCAM_LITTLE_THRESHOLD
+        value: 0.3
+      - key: SCAM_TOTAL_THRESHOLD
+        value: 0.6
