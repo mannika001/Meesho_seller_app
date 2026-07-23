@@ -6,6 +6,7 @@ const payoutSchema = new mongoose.Schema(
     quantity: Number,
     price: Number,
     orderDate: Date,
+    orderStatus: String,
     payoutValue: Number,
     payoutStatus: String,
   },

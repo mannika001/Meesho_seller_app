@@ -13,6 +13,12 @@ const COLUMN_MAP = {
   "quantity": "quantity",
   "price": "price",
   "order date": "orderDate",
+  // The order's actual lifecycle status (Delivered/Cancelled/RTO_Complete/
+  // Returned/...) — distinct from "payout status" (SETTLED/NA/PENDING) and
+  // from the Orders export's "Reason for Credit Entry", which has no
+  // "Returned" value of its own. This is the only column, across all 3
+  // uploaded files, that identifies a genuine customer return.
+  "order status": "orderStatus",
   "payout value": "payoutValue",
   "payout status": "payoutStatus",
 };

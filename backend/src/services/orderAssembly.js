@@ -3,14 +3,21 @@
 // 4 source-specific collections (GstRecord, Label, OrderInfo, Payout), keeping
 // the API contract unchanged while storage is split by upload source.
 
-// Aggregation pipeline stages: union subOrderNum across all 4 collections,
-// $lookup each one back in, then reshape to the original nested Order shape.
+// Aggregation pipeline stages: union subOrderNum across OrderInfo + Payout only
+// (an order only counts once it's shown up in the Orders export or the Order
+// Summary/payments export — those are the two files that actually represent a
+// placed order), then $lookup GstRecord/Label back in as enrichment for orders
+// that have them, and reshape to the original nested Order shape. A subOrderNum
+// that only ever appears in the GST TCS report or a shipping label (no Orders/
+// Order Summary row) is excluded — it isn't a confirmed order, and including it
+// inflated totalOrders by ~50 rows past the reconciled Orders/Order Summary count.
+// Callers must call this via OrderInfo.aggregate([...]) (or Payout.aggregate),
+// not GstRecord.aggregate — the first stage projects off whichever model
+// .aggregate() was invoked on.
 // Callers append their own $match/$sort/$group/etc. after these stages.
 export function mergedOrderPipelineStages() {
   return [
     { $project: { _id: 0, subOrderNum: 1 } },
-    { $unionWith: { coll: "labels", pipeline: [{ $project: { _id: 0, subOrderNum: 1 } }] } },
-    { $unionWith: { coll: "orderinfos", pipeline: [{ $project: { _id: 0, subOrderNum: 1 } }] } },
     { $unionWith: { coll: "payouts", pipeline: [{ $project: { _id: 0, subOrderNum: 1 } }] } },
     { $group: { _id: "$subOrderNum" } },
     {

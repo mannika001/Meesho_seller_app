@@ -11,6 +11,7 @@ import { mergedOrderPipelineStages, mergeOrderDocs } from "./orderAssembly.js";
 // (mergedOrderPipelineStages aggregation) produce the identical merged shape.
 
 const SUB_ORDER_NUM = "TESTVERIFY_assembly_1";
+const GST_ONLY_SUB_ORDER_NUM = "TESTVERIFY_gstonly_1"; // no OrderInfo/Payout row — must be excluded from the list path
 
 const seedData = {
   gst: { gst: { orderDate: new Date("2026-02-01"), totalInvoiceValue: 500 }, isReturned: false },
@@ -40,7 +41,7 @@ function assertMerged(label, order) {
 
 async function cleanup() {
   await Promise.all([
-    GstRecord.deleteMany({ subOrderNum: SUB_ORDER_NUM }),
+    GstRecord.deleteMany({ subOrderNum: { $in: [SUB_ORDER_NUM, GST_ONLY_SUB_ORDER_NUM] } }),
     Label.deleteMany({ subOrderNum: SUB_ORDER_NUM }),
     OrderInfo.deleteMany({ subOrderNum: SUB_ORDER_NUM }),
     Payout.deleteMany({ subOrderNum: SUB_ORDER_NUM }),
@@ -56,6 +57,8 @@ async function main() {
     Label.create({ subOrderNum: SUB_ORDER_NUM, ...seedData.label }),
     OrderInfo.create({ subOrderNum: SUB_ORDER_NUM, ...seedData.orderInfo }),
     Payout.create({ subOrderNum: SUB_ORDER_NUM, ...seedData.payout }),
+    // GST-only row, no OrderInfo/Payout — should never surface in the list path.
+    GstRecord.create({ subOrderNum: GST_ONLY_SUB_ORDER_NUM, gst: { totalInvoiceValue: 999 } }),
   ]);
 
   // Detail path: 4 parallel findOnes + plain-function merge.
@@ -69,15 +72,27 @@ async function main() {
   const detailPass = assertMerged("detail-path", detailOrder);
 
   // List path: aggregation pipeline, filtered down to just our test row.
-  const [listOrder] = await GstRecord.aggregate([
+  const [listOrder] = await OrderInfo.aggregate([
     ...mergedOrderPipelineStages(),
     { $match: { subOrderNum: SUB_ORDER_NUM } },
   ]);
   const listPass = assertMerged("list-path", listOrder || {});
 
+  // A subOrderNum with only a GstRecord (no OrderInfo/Payout) must not appear
+  // in the list path — it isn't a confirmed order, just a GST-report row.
+  const gstOnlyMatches = await OrderInfo.aggregate([
+    ...mergedOrderPipelineStages(),
+    { $match: { subOrderNum: GST_ONLY_SUB_ORDER_NUM } },
+  ]);
+  const exclusionPass = gstOnlyMatches.length === 0;
+  console.log(
+    exclusionPass ? "PASS" : "FAIL",
+    `exclusion: GST-only subOrderNum found in list = ${gstOnlyMatches.length} (expected 0)`
+  );
+
   await cleanup();
 
-  const allPass = detailPass && listPass;
+  const allPass = detailPass && listPass && exclusionPass;
   console.log(allPass ? "\nALL ORDER ASSEMBLY CHECKS PASSED" : "\nSOME CHECKS FAILED");
   await mongoose.disconnect();
   if (!allPass) process.exit(1);

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import GstRecord from "../models/GstRecord.js";
+import OrderInfo from "../models/OrderInfo.js";
 import { mergedOrderPipelineStages } from "../services/orderAssembly.js";
 
 const router = Router();
@@ -15,7 +15,7 @@ const router = Router();
 // combined — it isn't a clean commission-only figure, just what actually
 // disappears between listed price and what lands in the bank.
 router.get("/", async (req, res) => {
-  const products = await GstRecord.aggregate([
+  const products = await OrderInfo.aggregate([
     ...mergedOrderPipelineStages(),
     {
       $addFields: {

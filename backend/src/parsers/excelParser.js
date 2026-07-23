@@ -38,6 +38,14 @@ const NUMBER_FIELDS = new Set([
 
 const DATE_FIELDS = new Set(["orderDate", "manifestDate", "cancelReturnDate"]);
 
+// Known bad rows in Meesho's TCS export: tax_amount wildly inconsistent with
+// total_invoice_value (e.g. tax_amount=130200 on a 248 invoice). Excluded by
+// sub_order_num, not by a value threshold, since a threshold would be fragile.
+const EXCLUDED_SUB_ORDER_NUMS = new Set([
+  "299891276865084928_1",
+  "300598398712028672_1",
+]);
+
 function cellText(cellValue) {
   if (cellValue === null || cellValue === undefined) return "";
   if (typeof cellValue === "object" && "result" in cellValue) return String(cellValue.result ?? "");
@@ -86,7 +94,7 @@ export async function parseTcsSheet(buffer) {
         obj[field] = text;
       }
     });
-    if (obj.subOrderNum) rows.push(obj);
+    if (obj.subOrderNum && !EXCLUDED_SUB_ORDER_NUMS.has(obj.subOrderNum)) rows.push(obj);
   });
 
   return rows;

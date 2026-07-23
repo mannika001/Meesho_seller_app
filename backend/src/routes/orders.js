@@ -26,14 +26,14 @@ router.get("/", async (req, res) => {
   }
 
   const [orders, countResult] = await Promise.all([
-    GstRecord.aggregate([
+    OrderInfo.aggregate([
       ...mergedOrderPipelineStages(),
       { $match: filter },
       { $sort: { "gst.orderDate": -1 } },
       { $skip: (page - 1) * limit },
       { $limit: limit },
     ]),
-    GstRecord.aggregate([...mergedOrderPipelineStages(), { $match: filter }, { $count: "total" }]),
+    OrderInfo.aggregate([...mergedOrderPipelineStages(), { $match: filter }, { $count: "total" }]),
   ]);
   const total = countResult[0]?.total ?? 0;
 
@@ -58,110 +58,90 @@ router.get("/", async (req, res) => {
 // upload batch) — total orders, status breakdown, and the order-date range
 // the data actually spans, so a stat like "0 cancelled" is legible as real
 // vs. "nothing uploaded yet".
-// Shared by exclusiveDelivered's count and its revenue sum below, so the two
-// stay in lockstep instead of two copies of the same condition drifting apart.
-const EXCLUSIVE_DELIVERED_COND = {
+// A GST-returns-sheet entry only means a genuine customer return if the order
+// was actually DELIVERED (or has no orderInfo status yet at all). A CANCELLED
+// or RTO_COMPLETE order can also carry a GST return-sheet row — that's Meesho
+// reversing tax for the cancellation/RTO itself, not a customer sending
+// something back — so it must stay counted as CANCELLED/RTO, not "returned".
+// Only used as a fallback below, for orders where Order Summary (and its own
+// authoritative Order Status column) hasn't been uploaded yet.
+export const TRUE_RETURN_COND = {
   $and: [
-    { $ne: ["$isReturned", true] },
+    "$isReturned",
     {
       $or: [
         { $eq: ["$orderInfo.orderStatus", "DELIVERED"] },
-        {
-          $and: [
-            { $eq: ["$payout.payoutStatus", "SETTLED"] },
-            { $not: [{ $ifNull: ["$orderInfo.orderStatus", false] }] },
-          ],
-        },
+        { $not: [{ $ifNull: ["$orderInfo.orderStatus", false] }] },
       ],
     },
   ],
 };
 
+// Order Summary's own "Order Status" column (Delivered/Cancelled/RTO/Returned)
+// is the one authoritative, mutually-exclusive status per order — it's the
+// only file with 100% coverage and the only one with a literal "Returned"
+// value. Falls back to the Orders export status + GST-returns heuristic only
+// for orders Order Summary hasn't been uploaded for yet.
+const EFFECTIVE_STATUS = {
+  $switch: {
+    branches: [
+      { case: { $eq: ["$payout.orderStatus", "Returned"] }, then: "RETURNED" },
+      { case: { $eq: ["$payout.orderStatus", "Delivered"] }, then: "DELIVERED" },
+      { case: { $eq: ["$payout.orderStatus", "Cancelled"] }, then: "CANCELLED" },
+      { case: { $eq: ["$payout.orderStatus", "RTO"] }, then: "RTO" },
+      { case: TRUE_RETURN_COND, then: "RETURNED" },
+      { case: { $eq: ["$orderInfo.orderStatus", "DELIVERED"] }, then: "DELIVERED" },
+      { case: { $eq: ["$orderInfo.orderStatus", "CANCELLED"] }, then: "CANCELLED" },
+      { case: { $eq: ["$orderInfo.orderStatus", "RTO_COMPLETE"] }, then: "RTO" },
+      // Meesho only settles payout after delivery, so a SETTLED payout with
+      // no status from either file yet still reads as delivered.
+      {
+        case: {
+          $and: [
+            { $eq: ["$payout.payoutStatus", "SETTLED"] },
+            { $not: [{ $ifNull: ["$orderInfo.orderStatus", false] }] },
+          ],
+        },
+        then: "DELIVERED",
+      },
+    ],
+    default: "OTHER",
+  },
+};
+
 router.get("/stats", async (req, res) => {
-  const [statusAgg] = await GstRecord.aggregate([
+  const [statusAgg] = await OrderInfo.aggregate([
     ...mergedOrderPipelineStages(),
+    { $addFields: { effectiveStatus: EFFECTIVE_STATUS } },
     {
       $group: {
         _id: null,
         totalOrders: { $sum: 1 },
-        // Counts DELIVERED from the Orders Excel export, plus orders with no
-        // orderInfo yet (Orders Excel not uploaded for them) but a SETTLED
-        // payout and no return recorded — Meesho only settles payout after
-        // delivery, so this keeps "delivered" moving in lockstep with money
-        // made instead of waiting on a second file upload.
-        delivered: {
+        delivered: { $sum: { $cond: [{ $eq: ["$effectiveStatus", "DELIVERED"] }, 1, 0] } },
+        deliveredRevenue: {
           $sum: {
             $cond: [
-              {
-                $or: [
-                  { $eq: ["$orderInfo.orderStatus", "DELIVERED"] },
-                  {
-                    $and: [
-                      { $eq: ["$payout.payoutStatus", "SETTLED"] },
-                      { $not: [{ $ifNull: ["$orderInfo.orderStatus", false] }] },
-                      { $ne: ["$isReturned", true] },
-                    ],
-                  },
-                ],
-              },
-              1,
+              { $and: [{ $eq: ["$effectiveStatus", "DELIVERED"] }, { $eq: ["$payout.payoutStatus", "SETTLED"] }] },
+              { $ifNull: ["$payout.payoutValue", 0] },
               0,
             ],
           },
         },
-        cancelled: { $sum: { $cond: [{ $eq: ["$orderInfo.orderStatus", "CANCELLED"] }, 1, 0] } },
-        rto: { $sum: { $cond: [{ $eq: ["$orderInfo.orderStatus", "RTO_COMPLETE"] }, 1, 0] } },
-        returned: { $sum: { $cond: ["$isReturned", 1, 0] } },
-        // Mutually-exclusive breakdown that sums to totalOrders, unlike the
-        // 4 stats above (which overlap: a CANCELLED or RTO_COMPLETE order
-        // can also carry isReturned=true from the GST returns sheet, and
-        // "delivered" doesn't currently exclude isReturned either). Here
-        // isReturned wins first — a return/credit-note entry is a real event
-        // that happened regardless of what status Orders Excel recorded —
-        // then status, then "other" for orders with no status/return data.
-        exclusiveReturned: { $sum: { $cond: ["$isReturned", 1, 0] } },
+        cancelled: { $sum: { $cond: [{ $eq: ["$effectiveStatus", "CANCELLED"] }, 1, 0] } },
+        rto: { $sum: { $cond: [{ $eq: ["$effectiveStatus", "RTO"] }, 1, 0] } },
+        returned: { $sum: { $cond: [{ $eq: ["$effectiveStatus", "RETURNED"] }, 1, 0] } },
         // Settled payout tied to returned orders — usually negative (Meesho
         // deducting for the return), so this is a loss figure, not revenue.
-        exclusiveReturnedRevenue: {
+        returnedRevenue: {
           $sum: {
             $cond: [
-              { $and: ["$isReturned", { $eq: ["$payout.payoutStatus", "SETTLED"] }] },
+              { $and: [{ $eq: ["$effectiveStatus", "RETURNED"] }, { $eq: ["$payout.payoutStatus", "SETTLED"] }] },
               { $ifNull: ["$payout.payoutValue", 0] },
               0,
             ],
           },
         },
-        exclusiveDelivered: { $sum: { $cond: [EXCLUSIVE_DELIVERED_COND, 1, 0] } },
-        // Settled revenue restricted to exclusively-delivered orders — unlike
-        // settledRevenue below, this excludes negative-settled returns, so it
-        // reads as "money earned from orders that actually stayed delivered."
-        exclusiveDeliveredRevenue: {
-          $sum: {
-            $cond: [
-              { $and: [EXCLUSIVE_DELIVERED_COND, { $eq: ["$payout.payoutStatus", "SETTLED"] }] },
-              { $ifNull: ["$payout.payoutValue", 0] },
-              0,
-            ],
-          },
-        },
-        exclusiveCancelled: {
-          $sum: {
-            $cond: [
-              { $and: [{ $ne: ["$isReturned", true] }, { $eq: ["$orderInfo.orderStatus", "CANCELLED"] }] },
-              1,
-              0,
-            ],
-          },
-        },
-        exclusiveRto: {
-          $sum: {
-            $cond: [
-              { $and: [{ $ne: ["$isReturned", true] }, { $eq: ["$orderInfo.orderStatus", "RTO_COMPLETE"] }] },
-              1,
-              0,
-            ],
-          },
-        },
+        other: { $sum: { $cond: [{ $eq: ["$effectiveStatus", "OTHER"] }, 1, 0] } },
         // Money actually settled to the bank — driven only by the Order
         // Summary file's own Payout Status column, not orderInfo.orderStatus
         // (which comes from a *different* file, the Orders Excel export).
@@ -200,33 +180,36 @@ router.get("/stats", async (req, res) => {
     { $group: { _id: null, earliest: { $min: "$effectiveOrderDate" }, latest: { $max: "$effectiveOrderDate" } } },
   ]);
   const totalOrders = statusAgg?.totalOrders ?? 0;
-  const exclusiveDelivered = statusAgg?.exclusiveDelivered ?? 0;
-  const exclusiveCancelled = statusAgg?.exclusiveCancelled ?? 0;
-  const exclusiveRto = statusAgg?.exclusiveRto ?? 0;
-  const exclusiveReturned = statusAgg?.exclusiveReturned ?? 0;
+  const delivered = statusAgg?.delivered ?? 0;
+  const cancelled = statusAgg?.cancelled ?? 0;
+  const rto = statusAgg?.rto ?? 0;
+  const returned = statusAgg?.returned ?? 0;
+  const other = statusAgg?.other ?? 0;
 
   res.json({
     ok: true,
     totalOrders,
-    delivered: statusAgg?.delivered ?? 0,
-    cancelled: statusAgg?.cancelled ?? 0,
-    rto: statusAgg?.rto ?? 0,
-    returned: statusAgg?.returned ?? 0,
+    delivered,
+    cancelled,
+    rto,
+    returned,
     settledRevenue: statusAgg?.settledRevenue ?? 0,
     settledRevenueFrom: settledRevenueDateRange?.earliest ?? null,
     settledRevenueTo: settledRevenueDateRange?.latest ?? null,
     earliestOrderDate: dateRange?.earliest ?? null,
     latestOrderDate: dateRange?.latest ?? null,
-    // Mutually-exclusive breakdown — always sums to totalOrders, unlike the
-    // fields above. "other" is orders with no status/return data at all yet.
+    // Same 4 numbers as above, restated as a mutually-exclusive breakdown that
+    // sums to totalOrders (kept for API back-compat — every order now has
+    // exactly one effectiveStatus, so this is no longer a distinct
+    // computation from the fields above).
     exclusive: {
-      delivered: exclusiveDelivered,
-      deliveredRevenue: statusAgg?.exclusiveDeliveredRevenue ?? 0,
-      cancelled: exclusiveCancelled,
-      rto: exclusiveRto,
-      returned: exclusiveReturned,
-      returnedRevenue: statusAgg?.exclusiveReturnedRevenue ?? 0,
-      other: Math.max(0, totalOrders - exclusiveDelivered - exclusiveCancelled - exclusiveRto - exclusiveReturned),
+      delivered,
+      deliveredRevenue: statusAgg?.deliveredRevenue ?? 0,
+      cancelled,
+      rto,
+      returned,
+      returnedRevenue: statusAgg?.returnedRevenue ?? 0,
+      other,
     },
   });
 });

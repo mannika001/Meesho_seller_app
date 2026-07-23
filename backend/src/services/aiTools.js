@@ -1,5 +1,6 @@
 import { Type } from "@google/genai";
 import GstRecord from "../models/GstRecord.js";
+import OrderInfo from "../models/OrderInfo.js";
 import Customer from "../models/Customer.js";
 import { mergedOrderPipelineStages } from "./orderAssembly.js";
 
@@ -97,7 +98,7 @@ async function search_orders({ dateFrom, dateTo, customerName, sku, state, retur
   if (typeof returned === "boolean") filter.isReturned = returned;
 
   const cappedLimit = Math.min(200, Number(limit) || 50);
-  const orders = await GstRecord.aggregate([
+  const orders = await OrderInfo.aggregate([
     ...mergedOrderPipelineStages(),
     { $match: filter },
     { $sort: { "gst.orderDate": -1 } },
